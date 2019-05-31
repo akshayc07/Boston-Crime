@@ -1,0 +1,159 @@
+---
+title: "Boston Crime"
+author: "Akshay Chougule"
+date: "March 21, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("readr")
+library("tidyverse")
+library("modelr")
+library("ggplot2")
+library("mlbench")
+library("readr")
+```
+
+
+```{r}
+data(BostonHousing)
+Boston<-BostonHousing
+
+```
+
+```{r,eval=FALSE}
+#plotting variables against crim to see relationship
+ggplot(Boston,aes(y=crim,x=zn))+geom_point()+ggtitle("crim vs zn")
+
+ggplot(Boston,aes(y=crim,x=indus))+geom_point()+ggtitle("crim vs indus")
+
+ggplot(Boston,aes(y=log2(crim),x=log2(rm)))+geom_point()+ggtitle("crim vs rm")
+
+ggplot(Boston,aes(y=log2(crim),x=log2(rad)))+geom_point()+ggtitle("crim vs rad") 
+
+ggplot(Boston,aes(y=log2(crim),x=log2(ptratio)))+geom_point()+
+  ggtitle("crim vs ptratio")
+
+ggplot(Boston,aes(y=log2(crim),x=log2(b)))+geom_point()+ggtitle("crim vs b")
+
+```
+
+
+From the graph, we can see that there no linearity between crim and above parameters. EVen by applying log, no linear relationship is observed.
+
+
+```{r}
+
+ggplot(Boston,aes(y=log2(crim),x=log2(nox)))+geom_point()+ggtitle("crim vs nox")
+
+ggplot(Boston,aes(y=log2(crim),x=age))+geom_point()+ggtitle("crim vs age")
+
+ggplot(Boston,aes(y=log2(crim),x=log2(dis)))+geom_point()+ggtitle("crim vs dis") 
+
+ggplot(Boston,aes(y=log2(crim),x=lstat))+geom_point()+ggtitle("crim vs lstat")
+
+ggplot(Boston,aes(y=log2(crim),x=log2(medv)))+geom_point()+ggtitle("crim vs medv")
+
+ggplot(Boston,aes(y=log2(crim),x=log2(tax)))+geom_point()+geom_smooth()+
+  ggtitle("crim vs tax") 
+
+
+
+```
+
+nox,age,dis,lstat,medv shows some relations.
+By observing,nox vs crime we can see some relation but cannot detect the linearity.But by applying log on the both sides there is positive linear relation can be observed.
+When logarithmic operation is done on the crim then poistive linearship is observed.
+By applying logarithmic operation on the crim and dis we can see negative linear relationship. When logarithmic operation is done on crim and relation is observed with lstat, positive linear relationship is observed. medv and crim shows the negative linearity.Tax shows positie linear relation with crim.
+From the above observations,its clear that these variables show linear relations. But detecting best predictor of crim among the above variables is difficult only from graphs.Thus RMSE is parameter that can be used to detect best predictor of crim.
+
+
+
+
+
+```{r}
+fit_nox<-lm(log2(crim)~log2(nox),data=Boston)
+print("rmse of fit_nox")
+rmse(fit_nox,Boston)
+
+fit_age<-lm(log2(crim)~age,data=Boston)
+print("rmse of fit_age")
+rmse(fit_age,Boston)
+
+fit_dis<-lm(log2(crim)~log2(dis),data=Boston)
+print("rmse of fit_dis")  
+rmse(fit_dis,Boston)
+
+fit_lstat<-lm(log2(crim)~lstat,data=Boston)
+print("rmse of fit_lstat")  
+rmse(fit_lstat,Boston)
+
+
+fit_medv<-lm(log2(crim)~log2(medv),data=Boston)
+print("rmse of fit_medv")  
+rmse(fit_medv,Boston)
+
+fit_tax<-lm(log2(crim)~log2(tax),data=Boston)
+print("rmse of fit_tax")  
+rmse(fit_tax,Boston)
+
+print("summary of model fit_tax")
+summary(fit_tax)
+
+print("summary of model fit_nox")
+summary(fit_nox)
+```
+
+rmse of fit_tax is lower i.e. 1.840265 compared to other models. Thus tax is better predictor of crim tha compared to other variables. 
+Also comparing the R-squared values of two models with lowest rmse values, its observed that R-square value of fit_tax is lowest.
+Thus comparing rmse and r-squared values , it is seen that fit_tax is best model.
+
+
+
+```{r}
+Boston%>%add_residuals(fit_tax)%>%
+  ggplot(aes(x=log2(medv),y=log2(resid)))+geom_point()+geom_smooth()
+
+Boston%>%add_residuals(fit_tax)%>%
+  ggplot(aes(x=lstat,y=log2(resid)))+geom_point()+geom_smooth()
+
+Boston%>%add_residuals(fit_tax)%>%
+  ggplot(aes(x=log2(nox),y=log2(resid)))+geom_point()+geom_smooth()
+
+Boston%>%add_residuals(fit_tax)%>%
+  ggplot(aes(x=log2(dis),y=log2(resid)))+geom_point()+geom_smooth()
+
+Boston%>%add_residuals(fit_tax)%>%
+  ggplot(aes(x=age,y=resid))+geom_point()+geom_smooth()
+
+```
+From the residual of the fitted model vs other predictor plot, it is seen that medv,lstat,dis,nox,age show linearity. Thus even these can be potential predictor.
+
+
+```{r}
+final_fit<-lm(log2(crim)~log2(nox)+log2(medv)+lstat+log2(dis)+age+
+                log2(tax),data=Boston)
+
+coefficients(final_fit)
+
+rmse(final_fit,Boston)
+
+summary(final_fit)
+
+
+fits_rmse <- tibble(nvar = 1:6,
+rmse = c(rmse(fit_medv, Boston),
+rmse(fit_lstat, Boston),
+rmse(fit_age,Boston),
+rmse(fit_dis, Boston),
+rmse(fit_nox, Boston),
+rmse(fit_tax,Boston)))
+ggplot(fits_rmse) + geom_line(aes(x=nvar, y=rmse))
+
+```
+ medv,lstat,dis,nox,age show linearity with residuals of model. So we can say that adding those variables can bring the prediction more accurate. So to crosscheck, we can create model with all these variables. and we can see that rmse found to be decreased than a single predictor. RMSE went down to 1.39 from 1.82. Thus we can use this as fitted model.
+From the plot of rmse and nvar we can see that rmse is decreasing from 1st to 5th variable and there is smallest decrease in rmse from 5th to 6th, now we can stop and say that these are the sufficient predictors.
+From the summary nox, lstat , tax has smallest value of P so it can be said that these are most influencing predictors.
+
+
